@@ -7,6 +7,21 @@ phone's app-private Downloads folder.
 - Tech: Kotlin 2.0, Jetpack Compose (Material 3), OkHttp, DataStore.
 - Min Android: 7.0 (SDK 24). Target / compile SDK: 35 (Android 15).
 
+## Download
+
+Grab the latest APK from the
+[**Releases**](https://github.com/mickeyperry/EverythingDroid/releases/latest)
+page (built automatically by GitHub Actions on every tag).
+
+Install on Android via USB:
+
+```powershell
+C:\Android\adb.exe install -r EverythingDroid-vX.Y.Z-debug.apk
+```
+
+Or copy the APK to your phone and tap to install (enable "Install unknown apps"
+for your file manager first).
+
 ---
 
 ## 1. Enable the Everything HTTP server on your PC
