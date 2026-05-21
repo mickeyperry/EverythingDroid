@@ -1,112 +1,109 @@
 # EverythingDroid
 
-Android app that connects to **Voidtools Everything**'s built-in HTTP server,
-runs Everything search queries, and downloads files from your PC to the
-phone's app-private Downloads folder.
+**Your PC's file index, in your pocket.**
+Search anything on your computer from your phone. Download it. Play it. Done.
 
-- Tech: Kotlin 2.0, Jetpack Compose (Material 3), OkHttp, DataStore.
-- Min Android: 7.0 (SDK 24). Target / compile SDK: 35 (Android 15).
+Powered by [Voidtools Everything](https://www.voidtools.com/) and its HTTP server — so the search is instant, even across millions of files.
 
-## Download
+---
 
-Grab the latest APK from the
-[**Releases**](https://github.com/mickeyperry/EverythingDroid/releases/latest)
-page (built automatically by GitHub Actions on every tag).
+## What it does
 
-Install on Android via USB:
+- 🔍 **Search your whole PC** with Everything's blazing-fast index (same syntax: `*.pdf`, `ext:mp3 size:>5mb`, etc.)
+- 📂 **Tap a folder** to drill in. Back button to come out.
+- ⬇️ **Tap a file** to download. Progress bar included.
+- ▶️ **Play media** — for music & video, hit ▶ and your default player (VLC, MX Player, etc.) streams it directly. No download needed.
+- 📋 **Long-press anything** for a menu: Copy Windows path, Copy URL, Share, Open folder.
+- 🎛️ **Sort** by name, size, or date — instantly.
+- 🎨 **Icons that make sense** — music notes for `.mp3`, video reels for `.mkv`, archive boxes for `.zip`, and so on.
+
+---
+
+## Get the APK
+
+Grab the latest build straight from the
+[**Releases page**](https://github.com/mickeyperry/EverythingDroid/releases/latest) →
+download the `.apk` to your phone and tap it (you may need to allow "Install unknown apps" for your file manager).
+
+Or sideload via USB:
 
 ```powershell
-C:\Android\adb.exe install -r EverythingDroid-vX.Y.Z-debug.apk
+adb install -r EverythingDroid-vX.Y.Z-debug.apk
 ```
 
-Or copy the APK to your phone and tap to install (enable "Install unknown apps"
-for your file manager first).
+> Builds are CI-built and debug-signed. Same keystore every time, so updates install over the top cleanly.
 
 ---
 
-## 1. Enable the Everything HTTP server on your PC
+## First-time setup
 
-1. Open **Everything** (Voidtools).
-2. `Tools → Options → HTTP Server`.
-3. Tick **Enable HTTP server**.
-4. Note the **port** (default 80). Pick something like 8080 if 80 is taken.
-5. Optional but recommended on a LAN: set a **username** and **password**.
-6. Click **OK**.
-7. Make sure your firewall lets the phone reach that port. From the phone,
-   visiting `http://<pc-ip>:<port>/` in a browser should show Everything's
-   web search page.
+### 1. Turn on Everything's HTTP server
 
-The app uses Everything's official JSON endpoint:
+Open **Everything** on your PC → `Tools → Options → HTTP Server`:
 
-```
-http://<host>:<port>/?s=<query>&j=1&path_column=1&size_column=1&date_modified_column=1
-```
+1. Tick **Enable HTTP server**
+2. Pick a port (default `80`, or something like `8080` if 80 is taken)
+3. Optional but smart: set a **username + password**
+4. Hit OK
 
-And downloads files directly from `http://<host>:<port>/<path>` (the same URL
-Everything's web UI links to).
+From your phone, hitting `http://<pc-ip>:<port>/` in a browser should now show Everything's search page. If it doesn't, your firewall is blocking — open the port for your private network.
+
+### 2. Point the app at it
+
+Launch EverythingDroid → tap the ⚙️ icon → fill in:
+- **Host** — your PC's LAN IP (e.g. `192.168.1.20`) or Tailscale/VPN address
+- **Port** — what you set in step 1
+- **Username / Password** — only if you set them
+
+Hit Save. You're ready.
+
+### 3. Search & go
+
+Type a query. Tap a result. That's the whole app.
 
 ---
 
-## 2. Build the APK
+## Tips
 
-You currently don't have a JDK or the Android SDK installed. Pick one path:
+- **Everything search syntax** is the real one — `ext:flac`, `size:>100mb`, `dm:lastweek`, `path:music`, wildcards, regex, all of it.
+- **Folder browse** uses Everything's `parent:` operator under the hood.
+- **Downloads** land in `Android/data/com.mickey.everythingdroid/files/Download/` (the app's private storage — uninstalling the app wipes them).
+- **Stream auth**: if you've set Basic Auth, the Play button embeds credentials in the URL so VLC etc. can fetch protected files. Anyone sniffing the URL on your LAN can see them — fine for a personal tool, less fine on hostile networks.
 
-### Path A — Android Studio (recommended)
+---
 
-1. Install **Android Studio** (latest stable): <https://developer.android.com/studio>.
-   It bundles the JDK and SDK, so you don't need to install them separately.
-2. On first launch, let it install the SDK platform & build tools when prompted.
-3. `File → Open…` and select this project folder:
-   `C:\Users\Mickey\Documents\AndroidProjects\EverythingDroid`.
-4. Wait for Gradle sync (a few minutes the first time — it downloads
-   dependencies).
-5. Plug in your phone with USB debugging enabled, or use an emulator.
-6. Click **Run ▶** (or `Shift+F10`).
+## Heads up
 
-### Path B — Command-line build
+This is a personal LAN/Tailscale tool, not a hardened production app:
 
-Requires JDK 17 and the Android SDK / command-line tools on PATH with
-`ANDROID_HOME` set. Then from this folder:
+- **HTTP is cleartext.** Everything's server is plain HTTP by default. Use Tailscale or a VPN if you don't trust the network between phone and PC.
+- **Credentials live in app storage**, not encrypted at rest. Don't put real production passwords here.
+- **UNC paths** (network shares indexed by Everything) work — the app builds the right URL form (`%5C%5C<server>/...`). If a download 404s, the error toast shows the exact URL it tried — screenshot it and open an issue.
+
+---
+
+## Build it yourself
+
+You'll want **Android Studio** ([download](https://developer.android.com/studio)) — it bundles the JDK and Android SDK. Then `File → Open` this folder, let Gradle sync, hit Run.
+
+Or from the command line with JDK 17 + Android SDK on PATH:
 
 ```powershell
-.\gradlew.bat assembleDebug
+./gradlew assembleDebug
 ```
 
-The APK lands in `app\build\outputs\apk\debug\app-debug.apk`. Install with:
-
-```powershell
-C:\Android\adb.exe install -r app\build\outputs\apk\debug\app-debug.apk
-```
-
-> Note: the Gradle wrapper JAR (`gradle/wrapper/gradle-wrapper.jar`) is *not*
-> checked into this scaffold. Android Studio writes it for you on first sync.
-> For command-line builds without Studio, generate it once with
-> `gradle wrapper` from a system Gradle install, or copy it from any existing
-> Android project.
+APK lands in `app/build/outputs/apk/debug/`.
 
 ---
 
-## 3. Using the app
+## Under the hood
 
-1. Launch **EverythingDroid**, tap the gear icon to open Settings.
-2. Enter your PC's LAN IP (e.g. `192.168.1.20`), port, and optional creds.
-3. Save. Back on the search screen, type an Everything query (same syntax as
-   the desktop Everything search box: `*.pdf`, `size:>10mb`, `ext:zip`, etc.)
-   and tap the search icon.
-4. Tap the download icon on any file row — it streams the file to
-   `Android/data/com.mickey.everythingdroid/files/Download/` on the phone.
+- Kotlin 2.0 + Jetpack Compose (Material 3)
+- OkHttp for the HTTP/JSON dance with Everything
+- DataStore for settings
+- FileProvider for opening downloaded files in other apps
+- GitHub Actions builds the APK on every `v*` tag push and attaches it to a Release
 
 ---
 
-## 4. Notes & limits
-
-- **Cleartext HTTP is enabled** because Everything's server is plain HTTP by
-  default. If you front it with HTTPS (e.g. a reverse proxy), toggle the
-  HTTPS switch in Settings.
-- Auth is HTTP Basic; credentials are stored locally via DataStore.
-- Folder download isn't supported (Everything's HTTP server serves files, not
-  recursive folder archives). The app only enables the download button for
-  `type == "file"` results.
-- Downloads stream with a 64 KiB buffer and a 60s read timeout per chunk; very
-  large files over slow links may need a longer read timeout (edit
-  `EverythingApi.kt`).
+🤖 *Built with the help of [Claude Code](https://claude.com/claude-code).*
