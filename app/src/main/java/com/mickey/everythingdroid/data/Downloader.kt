@@ -38,13 +38,13 @@ class Downloader(
         try {
             val resp = call.execute()
             if (!resp.isSuccessful) {
-                trySend(DownloadEvent.Failed("HTTP ${resp.code} ${resp.message}"))
+                trySend(DownloadEvent.Failed("HTTP ${resp.code} ${resp.message}\nURL: $url"))
                 close()
                 return@callbackFlow
             }
 
             val body = resp.body ?: run {
-                trySend(DownloadEvent.Failed("Empty response body"))
+                trySend(DownloadEvent.Failed("Empty response body\nURL: $url"))
                 close()
                 return@callbackFlow
             }
@@ -66,7 +66,7 @@ class Downloader(
             trySend(DownloadEvent.Done(outFile))
             close()
         } catch (e: Exception) {
-            trySend(DownloadEvent.Failed(e.message ?: e::class.java.simpleName))
+            trySend(DownloadEvent.Failed("${e.message ?: e::class.java.simpleName}\nURL: $url"))
             close(e)
         }
         awaitClose { call.cancel() }
