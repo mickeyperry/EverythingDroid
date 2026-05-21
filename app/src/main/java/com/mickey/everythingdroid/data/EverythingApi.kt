@@ -97,19 +97,24 @@ class EverythingApi(
 
     /**
      * Build the URL Everything's HTTP server serves a file at.
-     * Everything serves files at `http://host:port/<full path with forward slashes>` —
-     * each path segment URL-encoded, drive colon left as ':'.
+     *
+     * Local paths (e.g. `C:\foo\bar.txt`) become `http://host:port/C:/foo/bar.txt`.
+     * UNC paths (`\\server\share\file.txt`) become `http://host:port//server/share/file.txt`
+     * — the leading `//` is the URL convention that maps back to `\\server\share\...`.
      */
     fun buildFileUrl(fullPath: String): String {
         val s = settingsProvider()
         val base = s.baseUrl().trimEnd('/')
-        val segments = fullPath.split('\\', '/').filter { it.isNotEmpty() }
+        val normalized = fullPath.replace('\\', '/')
+        val isUnc = normalized.startsWith("//")
+        val segments = normalized.split('/').filter { it.isNotEmpty() }
         val encoded = segments.joinToString("/") { seg ->
             URLEncoder.encode(seg, "UTF-8")
                 .replace("+", "%20")
                 .replace("%3A", ":")
         }
-        return "$base/$encoded"
+        val prefix = if (isUnc) "//" else "/"
+        return "$base$prefix$encoded"
     }
 
     fun authHeader(): String? {
