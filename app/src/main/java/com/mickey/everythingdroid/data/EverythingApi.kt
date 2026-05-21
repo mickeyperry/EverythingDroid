@@ -98,9 +98,10 @@ class EverythingApi(
     /**
      * Build the URL Everything's HTTP server serves a file at.
      *
-     * Local paths (e.g. `C:\foo\bar.txt`) become `http://host:port/C:/foo/bar.txt`.
-     * UNC paths (`\\server\share\file.txt`) become `http://host:port//server/share/file.txt`
-     * — the leading `//` is the URL convention that maps back to `\\server\share\...`.
+     * Local paths (e.g. `C:\foo\bar.txt`) → `http://host:port/C:/foo/bar.txt`.
+     * UNC paths (`\\server\share\file.txt`) → `http://host:port/%5C%5Cserver/share/file.txt`
+     *   (single leading `/`, with the `\\` URL-encoded and prepended to the server-name segment —
+     *    this is the exact format Everything's web UI uses).
      */
     fun buildFileUrl(fullPath: String): String {
         val s = settingsProvider()
@@ -108,14 +109,19 @@ class EverythingApi(
         val normalized = fullPath.replace('\\', '/')
         val isUnc = normalized.startsWith("//")
         val segments = normalized.split('/').filter { it.isNotEmpty() }
-        val encoded = segments.joinToString("/") { seg ->
-            URLEncoder.encode(seg, "UTF-8")
-                .replace("+", "%20")
-                .replace("%3A", ":")
-        }
-        val prefix = if (isUnc) "//" else "/"
-        return "$base$prefix$encoded"
+        if (segments.isEmpty()) return base
+
+        val encoded = segments.map(::encodePathSegment).toMutableList()
+        if (isUnc) encoded[0] = "%5C%5C" + encoded[0]
+        return base + "/" + encoded.joinToString("/")
     }
+
+    private fun encodePathSegment(seg: String): String =
+        URLEncoder.encode(seg, "UTF-8")
+            .replace("+", "%20")
+            .replace("%3A", ":")
+            .replace("%28", "(")
+            .replace("%29", ")")
 
     fun authHeader(): String? {
         val s = settingsProvider()
