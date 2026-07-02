@@ -9,6 +9,8 @@ import com.mickey.everythingdroid.data.EverythingApi
 import com.mickey.everythingdroid.data.SearchResult
 import com.mickey.everythingdroid.data.ServerSettings
 import com.mickey.everythingdroid.data.SettingsStore
+import com.mickey.everythingdroid.data.StreamProxy
+import com.mickey.everythingdroid.ui.FileActions
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,18 +87,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val downloadDir: String get() = downloader.targetDirPath()
     fun fileUrl(r: SearchResult): String = api.buildFileUrl(r.fullPath)
     fun authHeader(): String? = api.authHeader()
-    fun streamUrlWithCreds(r: SearchResult): String {
-        val s = currentSettings.value
-        val raw = api.buildFileUrl(r.fullPath)
-        if (s.username.isBlank()) return raw
-        // Embed credentials: http://user:pass@host... Most external players (VLC, MX Player)
-        // honour this. Falls back to whatever the player does on 401 if not.
-        val schemeEnd = raw.indexOf("://").takeIf { it >= 0 } ?: return raw
-        val prefix = raw.substring(0, schemeEnd + 3)
-        val rest = raw.substring(schemeEnd + 3)
-        val userPart = java.net.URLEncoder.encode(s.username, "UTF-8")
-        val passPart = java.net.URLEncoder.encode(s.password, "UTF-8")
-        return "$prefix$userPart:$passPart@$rest"
+    private val streamProxy = StreamProxy(api.client()) { api.authHeader() }
+
+    /**
+     * Localhost relay URL for external players. Handing them the server URL
+     * directly fails: players don't do Basic auth, some mangle the %5C%5C UNC
+     * escapes, and Everything 400s their HEAD probes. See [StreamProxy].
+     */
+    fun localStreamUrl(r: SearchResult): String =
+        streamProxy.localUrlFor(api.buildFileUrl(r.fullPath), r.name, FileActions.mimeTypeFor(r.name))
+
+    override fun onCleared() {
+        streamProxy.stop()
+        super.onCleared()
     }
 
     private var searchJob: Job? = null

@@ -240,7 +240,7 @@ fun SearchScreen(
                             },
                             onLongPress = { menuResult = r },
                             onPlay = {
-                                FileActions.streamUrl(context, vm.streamUrlWithCreds(r), r.name)
+                                FileActions.streamUrl(context, vm.localStreamUrl(r), r.name)
                             },
                             onDownload = { vm.downloadResult(r) },
                         )
@@ -303,7 +303,7 @@ fun SearchScreen(
                             modifier = Modifier.combinedClickable(onClick = {
                                 menuResult = null
                                 scope.launch { sheetState.hide() }
-                                FileActions.streamUrl(context, vm.streamUrlWithCreds(r), r.name)
+                                FileActions.streamUrl(context, vm.localStreamUrl(r), r.name)
                             }),
                         )
                     }

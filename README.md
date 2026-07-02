@@ -68,7 +68,7 @@ Type a query. Tap a result. That's the whole app.
 - **Everything search syntax** is the real one — `ext:flac`, `size:>100mb`, `dm:lastweek`, `path:music`, wildcards, regex, all of it.
 - **Folder browse** uses Everything's `parent:` operator under the hood.
 - **Downloads** land in `Android/data/com.mickey.everythingdroid/files/Download/` (the app's private storage — uninstalling the app wipes them).
-- **Stream auth**: if you've set Basic Auth, the Play button embeds credentials in the URL so VLC etc. can fetch protected files. Anyone sniffing the URL on your LAN can see them — fine for a personal tool, less fine on hostile networks.
+- **Streaming**: the Play button hands players a `http://127.0.0.1:…` URL served by a tiny relay inside the app, which adds the Basic Auth credentials upstream and passes Range requests through (seeking works). Players never see your password, and Everything's quirks (no HEAD support, `\\` UNC escapes in URLs) are ironed out on the way. Keep the app in recents while playing — if Android kills it, the stream stops.
 
 ---
 
