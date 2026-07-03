@@ -78,10 +78,14 @@ object StreamProxy {
     @Synchronized
     private fun ensureStarted(): Int {
         server?.takeIf { !it.isClosed }?.let { return it.localPort }
+        // Explicit IPv4 loopback: getLoopbackAddress() returns ::1 on some devices
+        // (OnePlus/Android 14), while the URLs we hand out say 127.0.0.1 — players
+        // then get connection-refused even though the relay is up.
+        val lo4 = InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1))
         val ss = try {
-            ServerSocket(PREFERRED_PORT, 8, InetAddress.getLoopbackAddress())
+            ServerSocket(PREFERRED_PORT, 8, lo4)
         } catch (_: Exception) {
-            ServerSocket(0, 8, InetAddress.getLoopbackAddress())
+            ServerSocket(0, 8, lo4)
         }
         server = ss
         log("listening on 127.0.0.1:${ss.localPort}")
