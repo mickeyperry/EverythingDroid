@@ -17,6 +17,8 @@ data class ServerSettings(
     val https: Boolean = false,
     val username: String = "",
     val password: String = "",
+    /** SAF tree URI of a user-chosen download folder; blank = system Downloads. */
+    val downloadTree: String = "",
 ) {
     fun baseUrl(): String {
         val scheme = if (https) "https" else "http"
@@ -32,6 +34,7 @@ class SettingsStore(private val context: Context) {
     private val KEY_HTTPS = booleanPreferencesKey("https")
     private val KEY_USER = stringPreferencesKey("user")
     private val KEY_PASS = stringPreferencesKey("pass")
+    private val KEY_DOWNLOAD_TREE = stringPreferencesKey("download_tree")
 
     val settings: Flow<ServerSettings> = context.dataStore.data.map { p ->
         ServerSettings(
@@ -40,6 +43,7 @@ class SettingsStore(private val context: Context) {
             https = p[KEY_HTTPS] ?: false,
             username = p[KEY_USER].orEmpty(),
             password = p[KEY_PASS].orEmpty(),
+            downloadTree = p[KEY_DOWNLOAD_TREE].orEmpty(),
         )
     }
 
@@ -51,5 +55,9 @@ class SettingsStore(private val context: Context) {
             p[KEY_USER] = s.username
             p[KEY_PASS] = s.password
         }
+    }
+
+    suspend fun saveDownloadTree(tree: String) {
+        context.dataStore.edit { p -> p[KEY_DOWNLOAD_TREE] = tree }
     }
 }

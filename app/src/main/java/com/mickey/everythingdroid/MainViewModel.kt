@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import java.io.File
 
 enum class SortMode(val label: String) {
     NameAsc("Name ↑"),
@@ -60,14 +59,15 @@ data class DownloadUiState(
     val bytesRead: Long = 0,
     val total: Long = 0,
     val lastMessage: String? = null,
-    val completedFile: File? = null,
+    val completedUri: android.net.Uri? = null,
+    val completedMime: String? = null,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settingsStore = SettingsStore(app)
     private val currentSettings = MutableStateFlow(ServerSettings())
     private val api = EverythingApi { currentSettings.value }
-    private val downloader = Downloader(app, api)
+    private val downloader = Downloader(app, api) { currentSettings.value }
 
     val settings: StateFlow<ServerSettings> = currentSettings.asStateFlow()
 
@@ -84,7 +84,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val currentNav: NavEntry get() = _navStack.value.last()
     val isInBrowse: Boolean get() = currentNav.isBrowse
 
-    val downloadDir: String get() = downloader.targetDirPath()
+    val downloadDir: String get() = downloader.targetDescription()
+
+    fun setDownloadTree(tree: String) {
+        viewModelScope.launch { settingsStore.saveDownloadTree(tree) }
+    }
     fun fileUrl(r: SearchResult): String = api.buildFileUrl(r.fullPath)
     fun authHeader(): String? = api.authHeader()
     /**
@@ -198,8 +202,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     is DownloadEvent.Done -> {
                         _download.value = DownloadUiState(
                             activeKey = null,
-                            lastMessage = "Saved ${ev.file.name}",
-                            completedFile = ev.file,
+                            lastMessage = "Saved ${ev.name}",
+                            completedUri = ev.uri,
+                            completedMime = ev.mime,
                         )
                     }
                     is DownloadEvent.Failed -> {

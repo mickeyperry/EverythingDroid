@@ -84,17 +84,17 @@ fun SearchScreen(
     val inBrowse = navStack.size > 1
     val currentTitle = navStack.last().title
 
-    LaunchedEffect(download.lastMessage, download.completedFile) {
+    LaunchedEffect(download.lastMessage, download.completedUri) {
         val msg = download.lastMessage
         if (!msg.isNullOrBlank()) {
-            val file = download.completedFile
-            val res = if (file != null) {
-                snackbar.showSnackbar(msg, actionLabel = "Open", withDismissAction = true)
+            val uri = download.completedUri
+            val res = if (uri != null) {
+                snackbar.showSnackbar(msg, actionLabel = "Folder", withDismissAction = true)
             } else {
                 snackbar.showSnackbar(msg)
             }
-            if (res == SnackbarResult.ActionPerformed && file != null) {
-                FileActions.openFile(context, file)
+            if (res == SnackbarResult.ActionPerformed && uri != null) {
+                FileActions.openDownloadsFolder(context, vm.settings.value.downloadTree)
             }
             vm.clearDownloadMessage()
         }

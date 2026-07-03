@@ -88,6 +88,52 @@ object FileActions {
         }
     }
 
+    /** Open a downloaded file by its content/file URI. */
+    fun openUri(context: Context, uri: Uri, mime: String): Boolean {
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, mime)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(Intent.createChooser(intent, "Open with").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+            true
+        } catch (e: Exception) {
+            Toast.makeText(context, "No app can open this file", Toast.LENGTH_LONG).show()
+            false
+        }
+    }
+
+    /** Show the folder downloads land in — the chosen SAF folder, else system Downloads. */
+    fun openDownloadsFolder(context: Context, treeUri: String? = null) {
+        if (!treeUri.isNullOrBlank()) {
+            try {
+                val uri = Uri.parse(treeUri)
+                val doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                    uri, android.provider.DocumentsContract.getTreeDocumentId(uri)
+                )
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(doc, android.provider.DocumentsContract.Document.MIME_TYPE_DIR)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+                return
+            } catch (_: Exception) {
+                // fall through to the system Downloads UI
+            }
+        }
+        try {
+            context.startActivity(
+                Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (e: Exception) {
+            Toast.makeText(context, "No app can show the Downloads folder", Toast.LENGTH_LONG).show()
+        }
+    }
+
     fun shareText(context: Context, text: String, subject: String? = null) {
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
