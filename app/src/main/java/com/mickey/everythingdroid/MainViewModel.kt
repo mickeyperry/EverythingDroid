@@ -87,19 +87,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val downloadDir: String get() = downloader.targetDirPath()
     fun fileUrl(r: SearchResult): String = api.buildFileUrl(r.fullPath)
     fun authHeader(): String? = api.authHeader()
-    private val streamProxy = StreamProxy(api.client()) { api.authHeader() }
-
     /**
      * Localhost relay URL for external players. Handing them the server URL
      * directly fails: players don't do Basic auth, some mangle the %5C%5C UNC
      * escapes, and Everything 400s their HEAD probes. See [StreamProxy].
+     * Also raises a foreground service so the OS can't kill the relay mid-stream.
      */
-    fun localStreamUrl(r: SearchResult): String =
-        streamProxy.localUrlFor(api.buildFileUrl(r.fullPath), r.name, FileActions.mimeTypeFor(r.name))
-
-    override fun onCleared() {
-        streamProxy.stop()
-        super.onCleared()
+    fun localStreamUrl(r: SearchResult): String {
+        StreamKeepAliveService.start(getApplication())
+        return StreamProxy.localUrlFor(
+            api.client(), api::authHeader,
+            api.buildFileUrl(r.fullPath), r.name, FileActions.mimeTypeFor(r.name),
+        )
     }
 
     private var searchJob: Job? = null
