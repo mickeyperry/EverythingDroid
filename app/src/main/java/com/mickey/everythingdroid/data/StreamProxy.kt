@@ -185,11 +185,33 @@ object StreamProxy {
             }
             val contentRange = resp.header("Content-Range")
             val totalSize = contentRange?.substringAfter('/')?.toLongOrNull()
+            val upLen = resp.header("Content-Length")?.toLongOrNull()
+            val reqStart = range?.trim()
+                ?.removePrefix("bytes=")?.substringBefore('-')?.toLongOrNull()
+
+            // VLC probes past EOF and expects 416; Everything answers an empty 206.
+            if (!isHead && resp.code == 206 && upLen == 0L && reqStart != null && reqStart > 0) {
+                val cr = totalSize?.let { "Content-Range: bytes */$it\r\n" } ?: ""
+                out.write(
+                    ("HTTP/1.1 416 Range Not Satisfiable\r\n" + cr +
+                        "Accept-Ranges: bytes\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                        .toByteArray(Charsets.ISO_8859_1)
+                )
+                log("translated empty 206 -> 416")
+                return
+            }
+
             val headers = StringBuilder()
             if (isHead && range == null) {
                 // Report the full entity even though we ranged upstream.
                 headers.append("HTTP/1.1 200 OK\r\n")
                 totalSize?.let { headers.append("Content-Length: $it\r\n") }
+            } else if (resp.code == 200 && reqStart == 0L && upLen != null) {
+                // Everything answers `Range: bytes=0-` with a plain 200; a player that
+                // asked for a range (VLC) treats that as unseekable or errors out.
+                headers.append("HTTP/1.1 206 Partial Content\r\n")
+                headers.append("Content-Length: $upLen\r\n")
+                headers.append("Content-Range: bytes 0-${upLen - 1}/$upLen\r\n")
             } else {
                 val code = if (resp.code == 206) "206 Partial Content" else "200 OK"
                 headers.append("HTTP/1.1 $code\r\n")
